@@ -71,13 +71,19 @@ def update_chat_session_QA(response, question):
         st.session_state.q_list.append(question)
 
 def print_conversation(qa_map_session, q_list_session, isWelcomeMsg):
-    for q in q_list_session:
+    count = q_list_session.__len__()
+    count = count -1
+    while count >= 0:
+    #for q in q_list_session:
         if isWelcomeMsg:
             isWelcomeMsg = False
             continue
         else:
-            st.write(q)
+            q = q_list_session[count]
+            st.write(":blue[" + q + "]")
             st.write(qa_map_session.get_val(q))
+            count = count - 1
+
 
 
 questions_list = []
@@ -86,9 +92,7 @@ qa_map = map.HashMap(10)
 retriever = get_the_pdf_file()
 
 if is_doc_uploaded:
-    qa_map.put("Welcome", " the document " + file_name + " Is ready for a Q&A session")
-    questions_list.append("Welcome")
-    st.write(questions_list[0] + "," + qa_map.get_val(questions_list[0]))
+    st.write("Welcome" + "," + " the document " + file_name + " Is ready for a Q&A session")
     question = st.text_input("Type your questions", "here")
     qa = get_the_model(retriever)
     response = qa({"question": question})
