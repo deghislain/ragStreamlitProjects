@@ -60,55 +60,67 @@ def get_the_model(retriever):
     )
     return qa
 
-def update_chat_session_QA(response, question):
+
+questions_list = []
+qa_map = map.HashMap(10)
+
+
+def update_chat_session_QA(question, response):
     if 'qa_map' not in st.session_state:
         st.session_state['qa_map'] = qa_map
+        st.session_state.qa_map.put(question, response["answer"])
     else:
         st.session_state.qa_map.put(question, response["answer"])
     if 'q_list' not in st.session_state:
         st.session_state['q_list'] = questions_list
+        st.session_state.q_list.append(question)
     else:
         st.session_state.q_list.append(question)
 
-def print_conversation(qa_map_session, q_list_session, isWelcomeMsg):
-    count = q_list_session.__len__()
-    count = count -1
-    while count >= 0:
-    #for q in q_list_session:
-        if isWelcomeMsg:
-            isWelcomeMsg = False
-            continue
-        else:
-            q = q_list_session[count]
-            st.write(":blue[" + q + "]")
-            st.write(qa_map_session.get_val(q))
-            count = count - 1
+
+q_list_session = questions_list
+qa_map_session = qa_map
 
 
+def print_conversation():
+    global q_list_session, qa_map_session
+    if 'qa_map' in st.session_state:
+        qa_map_session = st.session_state['qa_map']
 
-questions_list = []
-qa_map = map.HashMap(10)
+    if 'q_list' in st.session_state:
+        q_list_session = st.session_state['q_list']
+
+    count = 0
+    while count < q_list_session.__len__():
+        messages = st.container(height=None, border=None)
+        q = q_list_session[count]
+        messages.chat_message("user").write(q)
+        messages.chat_message("assistant").write(qa_map_session.get_val(q))
+        count = count + 1
+
 
 retriever = get_the_pdf_file()
 
 if is_doc_uploaded:
     st.write("Welcome" + "," + " the document " + file_name + " Is ready for a Q&A session")
-    question = st.text_input("Type your questions", "here")
-    qa = get_the_model(retriever)
-    response = qa({"question": question})
-    update_chat_session_QA(response, question)
+    question = st.chat_input("Type your questions here")
 
-isWelcomeMsg = True
-if 'qa_map' in st.session_state:
-    qa_map_session = st.session_state['qa_map']
-else:
-    qa_map_session = qa_map
+    if 'qa_map' in st.session_state:
+        qa_map_session = st.session_state['qa_map']
 
-if 'q_list' in st.session_state:
-    q_list_session = st.session_state['q_list']
-else:
-    q_list_session = questions_list
+    if 'q_list' in st.session_state:
+        q_list_session = st.session_state['q_list']
+    count = 0
+    messages = st.container(height=None, border=None)
+    while count < q_list_session.__len__():
+        q = q_list_session[count]
+        messages.chat_message("user").write(q)
+        messages.chat_message("assistant").write(qa_map_session.get_val(q))
+        count = count + 1
 
-print_conversation(qa_map_session, q_list_session, isWelcomeMsg)
-
-
+    if question:
+        messages.chat_message("user").write(question)
+        qa = get_the_model(retriever)
+        response = qa({"question": question})
+        messages.chat_message("assistant").write(response["answer"])
+        update_chat_session_QA(question, response)
